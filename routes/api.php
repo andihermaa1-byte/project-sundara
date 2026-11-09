@@ -5,11 +5,60 @@ use App\Http\Controllers\Api\ClassController;
 use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\SessionController;
 use App\Http\Controllers\Api\DeviceController;
-use Illuminate\Support\Facades\Route;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
+use Laravel\Socialite\Facades\Socialite;
+
+/*
+|--------------------------------------------------------------------------
+| API Routes - SUNDARA Ecosystem
+|--------------------------------------------------------------------------
+*/
 
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
+
+    // Endpoint SSO Google untuk Flutter Mobile
+    Route::post('/google/mobile', function (Request $request) {
+        $request->validate([
+            'token' => 'required|string',
+        ]);
+
+        try {
+            /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
+            $driver = Socialite::driver('google');
+            $googleUser = $driver->stateless()->userFromToken($request->token);
+
+            $user = User::updateOrCreate([
+                'email' => $googleUser->getEmail(),
+            ], [
+                'name' => $googleUser->getName() ?? $googleUser->getNickname() ?? 'Guru Sundara',
+                'password' => bcrypt(Str::random(16)),
+            ]);
+
+            // Terbitkan Token Sanctum khusus mobile
+            $token = $user->createToken('auth_token_mobile')->plainTextToken;
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Login berhasil',
+                'token' => $token,
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid Google Token: ' . $e->getMessage()
+            ], 401);
+        }
+    });
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
@@ -28,8 +77,3 @@ Route::prefix('auth')->group(function () {
 
 // Endpoint Publik/Perangkat IoT ESP32 (FR-10)
 Route::post('/device/scan', [DeviceController::class, 'handleScan']);
-
-Route::middleware('auth:sanctum')->post('/logout', function (Request $request) {
-    $request->user()->currentAccessToken()->delete();
-    return response()->json(['message' => 'Logout berhasil']);
-});
