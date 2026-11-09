@@ -31,7 +31,18 @@
     </div>
 
     <script>
-        // Cek Token SSO saat halaman dimuat
+        // Tangkap parameter token dari URL jika user masuk dari callback Google SSO
+        const urlParams = new URLSearchParams(window.location.search);
+        const ssoToken = urlParams.get('token');
+        const ssoName = urlParams.get('name');
+
+        if (ssoToken) {
+            localStorage.setItem('sso_token', ssoToken);
+            localStorage.setItem('user_data', JSON.stringify({ name: decodeURIComponent(ssoName) }));
+            // Bersihkan query string token dari URL browser
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
         const token = localStorage.getItem('sso_token');
         const user = JSON.parse(localStorage.getItem('user_data') || '{}');
 
