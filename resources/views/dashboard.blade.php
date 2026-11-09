@@ -12,7 +12,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
-                    <span class="text-xl font-bold text-emerald-600">SUNDARA Board</span>
+                    <span class="text-xl font-bold text-emerald-600">SUNDARA</span>
                 </div>
                 <div class="flex items-center gap-4">
                     <span id="user-name" class="text-sm font-medium text-slate-700"></span>
@@ -31,38 +31,76 @@
     </div>
 
     <script>
-        // Tangkap parameter token dari URL jika user masuk dari callback Google SSO
-        const urlParams = new URLSearchParams(window.location.search);
-        const ssoToken = urlParams.get('token');
-        const ssoName = urlParams.get('name');
+        // 1. Fungsi Pengecekan Autentikasi
+        function checkAuth() {
+            const token = localStorage.getItem('sso_token');
+            if (!token) {
+                // Gunakan replace agar history dashboard ditimpa
+                window.location.replace('/login');
+            }
+        }
 
-        if (ssoToken) {
-            localStorage.setItem('sso_token', ssoToken);
-            localStorage.setItem('user_data', JSON.stringify({ name: decodeURIComponent(ssoName) }));
-            // Bersihkan query string token dari URL browser
+        // 2. Tangkap Token & Nama dari URL Parameter (saat redirect dari SSO Google)
+        const urlParams = new URLSearchParams(window.location.search);
+        const tokenFromUrl = urlParams.get('token');
+        const nameFromUrl = urlParams.get('name');
+
+        if (tokenFromUrl) {
+            localStorage.setItem('sso_token', tokenFromUrl);
+            if (nameFromUrl) {
+                localStorage.setItem('user_data', JSON.stringify({ name: decodeURIComponent(nameFromUrl) }));
+            }
+            // Bersihkan query string token dari URL bar browser
             window.history.replaceState({}, document.title, window.location.pathname);
         }
 
-        const token = localStorage.getItem('sso_token');
-        const user = JSON.parse(localStorage.getItem('user_data') || '{}');
+        // 3. Jalankan Proteksi Awal
+        checkAuth();
 
-        if (!token) {
-            window.location.href = '/login';
-        } else {
-            document.getElementById('user-name').innerText = user.name || 'Guru';
-        }
+        // 4. Proteksi saat user klik tombol BACK di browser (Mencegah caching bfcache)
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+                checkAuth();
+            }
+        });
 
-        // Event Handler Logout
-        document.getElementById('btn-logout').addEventListener('click', async function() {
-            await fetch('/api/auth/logout', {
-                method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer ' + token,
-                    'Accept': 'application/json'
+        // 5. Tampilkan Nama User & Setup Event Handler Logout
+        document.addEventListener('DOMContentLoaded', function() {
+            const userStr = localStorage.getItem('user_data');
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    const nameElement = document.getElementById('user-name');
+                    if (nameElement && user.name) {
+                        nameElement.innerText = user.name;
+                    }
+                } catch (e) {
+                    console.error('Error parsing user data:', e);
                 }
-            });
-            localStorage.clear();
-            window.location.href = '/login';
+            }
+
+            // Handler Tombol Logout
+            const logoutBtn = document.getElementById('btn-logout');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+
+                    const token = localStorage.getItem('sso_token');
+
+                    fetch('/api/auth/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer ' + token,
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    }).finally(() => {
+                        // Bersihkan storage dan alihkan ke login dengan replace()
+                        localStorage.clear();
+                        window.location.replace('/login');
+                    });
+                });
+            }
         });
     </script>
 </body>

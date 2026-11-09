@@ -21,9 +21,13 @@ Route::get('/login', function () {
     return view('login');
 });
 
-// Halaman View Dashboard Guru
+// Halaman View Dashboard Guru (ditambahkan Header No-Cache)
 Route::get('/dashboard', function () {
-    return view('dashboard');
+    return response()
+        ->view('dashboard')
+        ->header('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate')
+        ->header('Pragma', 'no-cache')
+        ->header('Expires', 'Sun, 02 Jan 1990 00:00:00 GMT');
 });
 
 // --------------------------------------------------------------------------
@@ -40,20 +44,21 @@ Route::get('/api/auth/google/callback', function () {
     try {
         $googleUser = Socialite::driver('google')->user();
 
-        // Cari user berdasarkan email Google, atau buat akun baru jika belum terdaftar
+        // Cari user berdasarkan email Google, atau buat akun baru jika belum ada
         $user = User::updateOrCreate([
             'email' => $googleUser->getEmail(),
         ], [
-            'name' => $googleUser->getName(),
-            'password' => bcrypt(Str::random(16)), // Password acak aman untuk SSO
+            'name' => $googleUser->getName() ?? $googleUser->getNickname() ?? 'Guru Sundara',
+            'password' => bcrypt(Str::random(16)),
         ]);
 
-        // Terbitkan Token Sanctum SSO untuk akses API
+        // Terbitkan Token Sanctum SSO
         $token = $user->createToken('auth_token')->plainTextToken;
 
         // Redirect ke Dashboard dengan membawa token & nama user
         return redirect("/dashboard?token=" . $token . "&name=" . urlencode($user->name));
     } catch (\Exception $e) {
-        return redirect('/login?error=sso_failed');
+        // Tampilkan pesan error detail jika terjadi masalah saat pemrosesan user/database
+        dd('SSO Callback Error: ' . $e->getMessage());
     }
 });

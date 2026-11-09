@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\SessionController;
 use App\Http\Controllers\Api\DeviceController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
@@ -27,3 +28,8 @@ Route::prefix('auth')->group(function () {
 
 // Endpoint Publik/Perangkat IoT ESP32 (FR-10)
 Route::post('/device/scan', [DeviceController::class, 'handleScan']);
+
+Route::middleware('auth:sanctum')->post('/logout', function (Request $request) {
+    $request->user()->currentAccessToken()->delete();
+    return response()->json(['message' => 'Logout berhasil']);
+});
