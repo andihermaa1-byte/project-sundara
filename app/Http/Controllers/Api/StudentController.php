@@ -44,4 +44,21 @@ class StudentController extends Controller
         Student::destroy($id);
         return response()->json(['status' => 'success', 'message' => 'Data siswa berhasil dihapus']);
     }
+    public function update(Request $request, $id)
+    {
+        $student = Student::findOrFail($id);
+        $request->validate([
+            'class_room_id'  => 'required|exists:class_rooms,id',
+            'student_number' => 'required|string',
+            'name'           => 'required|string'
+        ]);
+
+        $student->update($request->all());
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Data siswa berhasil diperbarui',
+            'data'    => $student
+        ]);
+    }
 }

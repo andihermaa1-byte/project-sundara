@@ -43,4 +43,20 @@ class ClassController extends Controller
         ClassRoom::destroy($id);
         return response()->json(['status' => 'success', 'message' => 'Kelas berhasil dihapus']);
     }
+    public function update(Request $request, $id)
+    {
+        $class = ClassRoom::findOrFail($id);
+        $request->validate([
+            'name'          => 'required|string',
+            'academic_year' => 'nullable|string'
+        ]);
+
+        $class->update($request->all());
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Data kelas berhasil diperbarui',
+            'data'    => $class
+        ]);
+    }
 }

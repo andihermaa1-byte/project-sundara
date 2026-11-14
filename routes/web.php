@@ -19,7 +19,24 @@ Route::get('/', function () {
 // Halaman View Login Guru
 Route::get('/login', function () {
     return view('login');
-});
+})->name('login');
+
+// Halaman View Registrasi Guru (Sejajar dengan login.blade.php)
+Route::get('/register', function () {
+    return view('register');
+})->name('register');
+// Halaman View Lupa Kata Sandi
+Route::get('/forgot-password', function () {
+    return view('forgot-password');
+})->name('password.request');
+
+// Halaman View Atur Ulang Kata Sandi (Link dari Email)
+Route::get('/reset-password/{token}', function (string $token) {
+    return view('reset-password', [
+        'token' => $token,
+        'email' => request()->query('email', ''),
+    ]);
+})->name('password.reset');
 
 // Halaman View Dashboard Guru (ditambahkan Header No-Cache)
 Route::get('/dashboard', function () {
@@ -29,7 +46,12 @@ Route::get('/dashboard', function () {
         ->header('Pragma', 'no-cache')
         ->header('Expires', 'Sun, 02 Jan 1990 00:00:00 GMT');
 });
-
+Route::view('/kelas', 'kelas');
+Route::view('/siswa', 'siswa');
+Route::view('/bank-soal', 'bank-soal');
+Route::get('/rfid-cards', function () {
+    return view('rfid-cards');
+});
 // --------------------------------------------------------------------------
 // SSO Google Routes (Laravel Socialite)
 // --------------------------------------------------------------------------
